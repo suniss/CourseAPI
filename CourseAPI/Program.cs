@@ -1,5 +1,8 @@
+using CourseAPI.DbContexts;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
@@ -13,14 +16,31 @@ namespace CourseAPI
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args).Build().Run();
+            var host = CreateHostBuilder(args).Build();
+
+            using (var scope = host.Services.CreateScope())
+            {
+                
+                try
+                {
+                    var context = scope.ServiceProvider.GetService<CourseContext>();
+                    context.Database.EnsureDeleted();
+                    context.Database.Migrate();
+                }
+                catch(Exception e)
+                {
+                    var logger = scope.ServiceProvider.GetRequiredService < ILogger<Program>>();
+                    logger.LogError($"Seed fail, message:{e.Message}");
+                }
+            };
+            host.Run();
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseStartup<Startup>();
-                });
+    public static IHostBuilder CreateHostBuilder(string[] args) =>
+        Host.CreateDefaultBuilder(args)
+        .ConfigureWebHostDefaults(webBuilder =>
+        {
+            webBuilder.UseStartup<Startup>();
+        });
     }
 }
